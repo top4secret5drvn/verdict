@@ -459,7 +459,7 @@ def abduce(kb, pred, args):
                         hyp_reason = Reason("абдукция", f"гипотеза_{cond.pred}", args=resolved_args, confidence=0.5)
                         kb.set_fact(cond.pred, resolved_args, 1, hyp_reason)
                         fire_demons(kb, cond.pred, resolved_args, 1)
-                        print(f"[АБДУКЦИЯ] Выдвинута гипотеза: {cond.pred}({resolved_args}) = да")
+                        print(f"[АБДУКЦИЯ] Выдвинута гипотеза: {cond.pred}({','.join(resolved_args)}) = да")
 
 
 # === ПАРСЕР ===
@@ -467,8 +467,7 @@ def parse_value(s):
     s = s.strip()
     if s in TRITS:
         return TRITS[s]
-    print(f"[ПРЕДУПРЕЖДЕНИЕ ПАРСЕРА] Недопустимое трит-значение '{s}'. Факт пропущен.")
-    return None
+    raise ValueError(f"Недопустимое трит-значение '{s}'. Парсер принимает только: да, нет, нез.")
 
 
 def parse_reason(s):
@@ -638,8 +637,6 @@ def parse_single_line(line, kb):
         if val is None:
             return
         reason = parse_reason(m.group(4).strip())
-        reason.name = pred
-        reason.args = args
         if m.group(5):
             reason.metadata = parse_metadata(m.group(5))
             if "надежность" in reason.metadata:
