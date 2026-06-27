@@ -13,54 +13,42 @@ from typing import Dict, List, Tuple, Optional, Any
 from collections import defaultdict
 import itertools
 
-# Локальные dataclass-структуры используются как lightweight-протоколы.
-# Основной интерпретатор работает с объектами по атрибутам, поэтому это
-# убирает хрупкий импорт устаревшего основного модуля и разрывает циклические импорты.
-@dataclass
-class Reason:
-    kind: str
-    name: str = ""
-    args: tuple = ()
-    parents: List["Reason"] = field(default_factory=list)
-    metadata: dict = field(default_factory=dict)
-    confidence: float = 1.0
+# Импортируем базовые классы из основного файла
+# (предполагаем, что они будут доступны при импорте)
+try:
+    from verdict7 import Reason, KnowledgeBase, Rule, Condition
+except ImportError:
+    # Если импорт не работает, определяем заглушки для разработки
+    @dataclass
+    class Reason:
+        kind: str
+        name: str = ""
+        args: tuple = ()
+        parents: List["Reason"] = field(default_factory=list)
+        metadata: dict = field(default_factory=dict)
+        confidence: float = 1.0
+    
+    class KnowledgeBase:
+        pass
+    
+    @dataclass
+    class Rule:
+        name: str
+        args: Tuple[str, ...]
+        conditions: List[Condition]
+        reason: Reason
+    
+    @dataclass
+    class Condition:
+        cond_type: str
+        pred: str = ""
+        args: Tuple[str, ...] = ()
+        expected_value: int = 0
+        expected_pattern: str = ""
+        op: str = ""
+        threshold: str = ""
+        meta_key: str = ""
 
-    def get_meta(self, key: str) -> Any:
-        queue = [self]
-        seen = set()
-        while queue:
-            cur = queue.pop(0)
-            if id(cur) in seen:
-                continue
-            seen.add(id(cur))
-            if key in cur.metadata:
-                return cur.metadata[key]
-            queue.extend(getattr(cur, "parents", []))
-        return None
-
-
-class KnowledgeBase:
-    pass
-
-
-@dataclass
-class Condition:
-    cond_type: str
-    pred: str = ""
-    args: Tuple[str, ...] = ()
-    expected_value: int = 0
-    expected_pattern: str = ""
-    op: str = ""
-    threshold: str = ""
-    meta_key: str = ""
-
-
-@dataclass
-class Rule:
-    name: str
-    args: Tuple[str, ...]
-    conditions: List[Condition]
-    reason: Reason
 
 @dataclass
 class Belief:
@@ -288,7 +276,7 @@ class ConceptFormationEngine:
             print(f"\nДобавляю правило: {concept['proposal']}")
             print(f"  Поддержка: {concept['support']}, Уверенность: {concept['confidence']:.2f}")
             
-            rule_name = concept['consequent']
+            rule_name = f"обобщение_{abs(hash(concept['pattern'])) % 10000}"
             args = ("X",)
             conditions = [
                 Condition("fact", pred=p, args=("X",), expected_value=1)
